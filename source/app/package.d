@@ -12,6 +12,7 @@ import requests;
 import provision;
 
 import constants;
+import utils : appleCABundle;
 
 struct ProvisioningData {
     Device device;
@@ -24,6 +25,7 @@ bool downloadAndInstallDeps(string configurationPath, bool delegate(float progre
     log.info("Downloading APK...");
     Request request = Request();
     request.sslSetVerifyPeer(true);
+    request.sslSetCaCert(appleCABundle());
     request.useStreaming = true;
 
     auto response = request.get(nativesUrl);
@@ -93,7 +95,7 @@ ProvisioningData initializeADI(string configurationPath) {
     if (!adi.isMachineProvisioned(-2)) {
         log.info("Provisioning device...");
 
-        ProvisioningSession provisioningSession = new ProvisioningSession(adi, device);
+        ProvisioningSession provisioningSession = new ProvisioningSession(adi, device, appleCABundle());
         provisioningSession.provision(-2);
         log.info("Device provisioned successfully.");
     }

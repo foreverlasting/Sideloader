@@ -1,5 +1,21 @@
 module utils;
 
+private string _appleCABundlePath = null;
+
+string appleCABundle() {
+    import std.file : write, tempDir, exists;
+    import std.path : buildPath;
+    import constants : appleRootCA, appleAuthCA;
+
+    if (_appleCABundlePath !is null && _appleCABundlePath.exists)
+        return _appleCABundlePath;
+
+    auto path = tempDir.buildPath("sideloader-apple-ca.pem");
+    write(path, appleRootCA ~ "\n" ~ cast(string) appleAuthCA);
+    _appleCABundlePath = path;
+    return path;
+}
+
 T orDefault(T)(T obj, lazy T default_) {
     return obj == null ? default_ : obj;
 }

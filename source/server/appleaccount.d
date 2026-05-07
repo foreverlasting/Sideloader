@@ -35,7 +35,7 @@ import plist;
 import constants;
 import server.applicationinformation;
 import server.applesrpsession;
-import utils;
+import utils : appleCABundle, locale, stripMilliseconds;
 
 enum AppleLoginErrorCode {
     mismatchedSRP = 1,
@@ -119,6 +119,7 @@ package class AppleAccount {
 
             Request request = Request();
             request.sslSetVerifyPeer(true);
+            request.sslSetCaCert(appleCABundle());
 
             request.addHeaders(cast(string[string]) [
                 "X-Apple-I-MD": Base64.encode(otp.oneTimePassword),
@@ -205,6 +206,7 @@ package class AppleAccount {
 
         Request request = Request();
         request.sslSetVerifyPeer(true);
+        request.sslSetCaCert(appleCABundle());
 
         request.addHeaders([
             "Content-Type": "text/x-xml-plist",
@@ -470,6 +472,7 @@ package class AppleAccount {
         auto time = Clock.currTime();
 
         rq.sslSetVerifyPeer(true);
+        rq.sslSetCaCert(appleCABundle());
         rq.addHeaders(cast(string[string]) [
             "Content-Type": "text/x-xml-plist",
             "Accept": "text/x-xml-plist",

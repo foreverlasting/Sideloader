@@ -378,13 +378,15 @@ public class ProvisioningSession {
     private ADI adi;
     private Device device;
 
-    public this(ADI adi, Device device) {
+    public this(ADI adi, Device device, string caFile = null) {
         this.adi = adi;
         this.device = device;
 
         request = Request();
 
         request.sslSetVerifyPeer(true);
+        if (caFile !is null)
+            request.sslSetCaCert(caFile);
         request.addHeaders([
             "User-Agent": "akd/1.0 CFNetwork/1404.0.5 Darwin/22.3.0",
 
