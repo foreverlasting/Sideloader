@@ -1,0 +1,68 @@
+name: Build
+
+on:
+  push:
+  workflow_dispatch:
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - frontend: gtk
+            triple: x86_64-linux-gnu
+
+          - frontend: gtk
+            triple: aarch64-linux-gnu
+
+          - frontend: cli
+            triple: x86_64-linux-gnu
+
+          - frontend: cli
+            triple: aarch64-linux-gnu
+
+          - frontend: cli
+            triple: x86_64-windows-msvc
+
+          - frontend: cli
+            triple: x86_64-apple-darwin
+
+          - frontend: cli
+            triple: arm64-apple-macos
+
+    name: Build ${{ matrix.frontend }} for ${{ matrix.triple }}
+
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Update APT repos
+        run: sudo apt-get update
+
+      - name: Set-up D compiler
+        uses: ./.github/actions/setup-d-compiler
+        with:
+          target-triple: ${{ matrix.triple }}
+
+      - name: Write version file
+        uses: ./.github/actions/write-version-file
+
+      - name: Build
+        run: dub build -b release-debug --compiler=ldc2 --arch ${{ matrix.triple }} :${{ matrix.frontend }}-frontend
+
+      - name: Move files around for artifcation
+        uses: ./.github/actions/rename-files
+        with:
+          build-tag: ${{ matrix.frontend }}-${{ matrix.triple }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sideloader-${{ matrix.frontend }}-${{ matrix.triple }}
+          path: |
+            ${{ github.workspace }}/bin/*
