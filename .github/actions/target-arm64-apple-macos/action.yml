@@ -12,8 +12,8 @@ runs:
       shell: bash
       run: |
         mkdir -p $HOME/.ldc/
-        LDC_VERSION=$(ldc2 --version | head -n 1 | grep -oE "[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*")
-        curl -LO https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.0.sdk.tar.xz
+        LDC_VERSION=1.34.0
+        curl --retry 5 --retry-connrefused --retry-delay 5 -LO https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.0.sdk.tar.xz
         tar -xf ./MacOSX11.0.sdk.tar.xz -C $HOME
         cp $(dirname $(which ldc2))/../etc/ldc2.conf $HOME/.ldc/ldc2.conf
         cat << EOF | tee $HOME/.ldc/ldc2.conf
@@ -47,5 +47,5 @@ runs:
         };
         EOF
         mkdir $HOME/ldc-macos
-        curl -LO https://github.com/ldc-developers/ldc/releases/download/v$LDC_VERSION/ldc2-$LDC_VERSION-osx-arm64.tar.xz
+        curl --retry 5 --retry-connrefused --retry-delay 5 -LO https://github.com/ldc-developers/ldc/releases/download/v$LDC_VERSION/ldc2-$LDC_VERSION-osx-arm64.tar.xz
         tar -xf ./ldc2-$LDC_VERSION-osx-arm64.tar.xz -C $HOME

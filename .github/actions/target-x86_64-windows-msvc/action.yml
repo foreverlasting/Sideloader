@@ -12,7 +12,7 @@ runs:
       shell: bash
       run: |
         mkdir -p $HOME/.ldc/
-        LDC_VERSION=$(ldc2 --version | head -n 1 | grep -oE "[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*")
+        LDC_VERSION=1.34.0
         cat << EOF | tee $HOME/.ldc/ldc2.conf
         "x86_64-.*-windows-msvc":
         {
@@ -30,5 +30,5 @@ runs:
             ];
         };
         EOF
-        curl -LO https://github.com/ldc-developers/ldc/releases/download/v$LDC_VERSION/ldc2-$LDC_VERSION-windows-x64.7z
+        curl --retry 5 --retry-connrefused --retry-delay 5 -LO https://github.com/ldc-developers/ldc/releases/download/v$LDC_VERSION/ldc2-$LDC_VERSION-windows-x64.7z
         7z x ./ldc2-$LDC_VERSION-windows-x64.7z -o$HOME
