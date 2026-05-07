@@ -27,6 +27,7 @@ class MainWindow: Window {
     private Box devicesBox;
 
     Label connectDeviceLabel;
+    private Label connectDeviceHint;
 
     Cursor defaultCursor;
     Cursor waitCursor;
@@ -94,8 +95,14 @@ class MainWindow: Window {
             content.setTitle(applicationName); {
                 Clamp clamp = new Clamp(); {
                     devicesBox = new Box(Orientation.VERTICAL, 0); {
-                        connectDeviceLabel = new Label("Please connect a device.");
+                        connectDeviceLabel = new Label("Connect your iPhone via USB");
                         devicesBox.append(connectDeviceLabel);
+
+                        connectDeviceHint = new Label("WiFi pairing is optional — you can set it up once your device is connected.");
+                        connectDeviceHint.addCssClass("dim-label");
+                        connectDeviceHint.setWrap(true);
+                        connectDeviceHint.setMarginTop(4);
+                        devicesBox.append(connectDeviceHint);
                     }
                     clamp.setChild(devicesBox);
                 }
@@ -114,6 +121,7 @@ class MainWindow: Window {
     void addDeviceWidget(iDeviceInfo deviceInfo) {
         if (deviceInfo !in deviceWidgets) {
             connectDeviceLabel.hide();
+            connectDeviceHint.hide();
             auto deviceWidget = new DeviceWidget(deviceInfo);
             deviceWidgets[deviceInfo] = deviceWidget;
             devicesBox.append(deviceWidgets[deviceInfo]);
@@ -128,6 +136,7 @@ class MainWindow: Window {
             deviceWidgets.remove(deviceId);
             if (deviceWidgets.length == 0) {
                 connectDeviceLabel.show();
+                connectDeviceHint.show();
             }
         }
     }

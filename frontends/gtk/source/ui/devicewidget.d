@@ -35,12 +35,14 @@ class DeviceWidget: PreferencesGroup {
     LockdowndClient lockdowndClient;
     Window toolSelectionWindow;
     Window wifiWindow;
+    private iDeviceConnectionType connType;
 
     this(iDeviceInfo deviceInfo) {
         string udid = deviceInfo.udid;
         string deviceId = format!"%s (%s)"(udid, deviceInfo.connType == iDeviceConnectionType.network ? "Network" : "USB");
 
         device = new iDevice(udid);
+        connType = deviceInfo.connType;
 
         ExpanderRow phoneExpander = new ExpanderRow();
         new Thread({
@@ -58,6 +60,7 @@ class DeviceWidget: PreferencesGroup {
         phoneExpander.setIconName("phone"); {
             ActionRow installApplicationRow = new ActionRow();
             installApplicationRow.setTitle("Install application...");
+            installApplicationRow.setSubtitle("Sign and install an .ipa file to your device");
             installApplicationRow.setIconName("system-software-install-symbolic");
             installApplicationRow.setActivatable(true);
             installApplicationRow.addOnActivated((_) => selectApplication(false));
@@ -74,7 +77,7 @@ class DeviceWidget: PreferencesGroup {
             if (deviceInfo.connType == iDeviceConnectionType.usbmuxd) {
                 ActionRow wifiSetupRow = new ActionRow();
                 wifiSetupRow.setTitle("Set up WiFi...");
-                wifiSetupRow.setSubtitle("Pair for wireless sideloading");
+                wifiSetupRow.setSubtitle("One-time setup — sideload wirelessly without a cable");
                 wifiSetupRow.setIconName("network-wireless-symbolic");
                 wifiSetupRow.setActivatable(true);
                 wifiSetupRow.addOnActivated((_) {
@@ -92,17 +95,28 @@ class DeviceWidget: PreferencesGroup {
             additionalToolsRow.addOnActivated((_) => showTools(device));
             phoneExpander.addRow(additionalToolsRow);
 
-            ActionRow informationsRow = new ActionRow();
-            informationsRow.setTitle("Informations");
-            informationsRow.setIconName("info-symbolic");
-            informationsRow.setActivatable(true);
-            informationsRow.addOnActivated((_) {
-                notImplemented();
-            });
-            phoneExpander.addRow(informationsRow);
         }
 
         add(phoneExpander);
+    }
+
+    private void offerWifiSetup() {
+        auto rootWindow = cast(Window) this.getRoot();
+        auto dialog = new MessageDialog(
+            rootWindow,
+            DialogFlags.DESTROY_WITH_PARENT | DialogFlags.MODAL | DialogFlags.USE_HEADER_BAR,
+            MessageType.QUESTION,
+            ButtonsType.YES_NO,
+            "Enable WiFi sideloading? Set up pairing now so future installs don't need a USB cable."
+        );
+        dialog.addOnResponse((response, _) {
+            dialog.close();
+            if (response == ResponseType.YES) {
+                wifiWindow = new WifiSetupWindow(device, cast(Window) this.getRoot());
+                wifiWindow.show();
+            }
+        });
+        dialog.show();
     }
 
     void showTools(iDevice device) {
@@ -133,7 +147,11 @@ class DeviceWidget: PreferencesGroup {
                 try {
                     Application app = new Application(path);
                     AuthenticationAssistant.authenticate(runningApplication, (developer) {
-                        SideloadProgressWindow.sideload(runningApplication, developer, app, device, managed, path);
+                        void delegate() wifiOffer = null;
+                        if (connType == iDeviceConnectionType.usbmuxd) {
+                            wifiOffer = () { offerWifiSetup(); };
+                        }
+                        SideloadProgressWindow.sideload(runningApplication, developer, app, device, managed, path, wifiOffer);
                     });
                 } catch (Exception ex) {
                     getLogger().errorF!"Invalid application: %s"(ex);
