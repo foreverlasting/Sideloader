@@ -28,11 +28,13 @@ import ui.sideloadprogresswindow;
 import ui.sideloadergtkapplication;
 import ui.toolselectionwindow;
 import ui.utils;
+import ui.wifisetupwindow;
 
 class DeviceWidget: PreferencesGroup {
     iDevice device;
     LockdowndClient lockdowndClient;
     Window toolSelectionWindow;
+    Window wifiWindow;
 
     this(iDeviceInfo deviceInfo) {
         string udid = deviceInfo.udid;
@@ -58,8 +60,30 @@ class DeviceWidget: PreferencesGroup {
             installApplicationRow.setTitle("Install application...");
             installApplicationRow.setIconName("system-software-install-symbolic");
             installApplicationRow.setActivatable(true);
-            installApplicationRow.addOnActivated((_) => selectApplication());
+            installApplicationRow.addOnActivated((_) => selectApplication(false));
             phoneExpander.addRow(installApplicationRow);
+
+            ActionRow managedInstallRow = new ActionRow();
+            managedInstallRow.setTitle("Install & manage...");
+            managedInstallRow.setSubtitle("Sideload and track for automatic re-signing");
+            managedInstallRow.setIconName("emblem-synchronizing-symbolic");
+            managedInstallRow.setActivatable(true);
+            managedInstallRow.addOnActivated((_) => selectApplication(true));
+            phoneExpander.addRow(managedInstallRow);
+
+            if (deviceInfo.connType == iDeviceConnectionType.usbmuxd) {
+                ActionRow wifiSetupRow = new ActionRow();
+                wifiSetupRow.setTitle("Set up WiFi...");
+                wifiSetupRow.setSubtitle("Pair for wireless sideloading");
+                wifiSetupRow.setIconName("network-wireless-symbolic");
+                wifiSetupRow.setActivatable(true);
+                wifiSetupRow.addOnActivated((_) {
+                    auto rootWindow = cast(Window) this.getRoot();
+                    wifiWindow = new WifiSetupWindow(device, rootWindow);
+                    wifiWindow.show();
+                });
+                phoneExpander.addRow(wifiSetupRow);
+            }
 
             ActionRow additionalToolsRow = new ActionRow();
             additionalToolsRow.setTitle("Additional tools");
@@ -87,7 +111,7 @@ class DeviceWidget: PreferencesGroup {
         toolSelectionWindow.show();
     }
 
-    void selectApplication() {
+    void selectApplication(bool managed = false) {
         auto rootWindow = cast(Window) this.getRoot();
         auto fileChooser = new FileChooserNative(
             "Select iOS application",
@@ -109,7 +133,7 @@ class DeviceWidget: PreferencesGroup {
                 try {
                     Application app = new Application(path);
                     AuthenticationAssistant.authenticate(runningApplication, (developer) {
-                        SideloadProgressWindow.sideload(runningApplication, developer, app, device);
+                        SideloadProgressWindow.sideload(runningApplication, developer, app, device, managed, path);
                     });
                 } catch (Exception ex) {
                     getLogger().errorF!"Invalid application: %s"(ex);
@@ -128,6 +152,9 @@ class DeviceWidget: PreferencesGroup {
     void closeWindows() {
         if (toolSelectionWindow) {
             toolSelectionWindow.close();
+        }
+        if (wifiWindow) {
+            wifiWindow.close();
         }
     }
 }

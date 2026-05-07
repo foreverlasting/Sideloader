@@ -54,6 +54,11 @@ class MainWindow: Window {
                     }
                     menu.appendSection(null, accountActions);
 
+                    Menu managedSection = new Menu(); {
+                        managedSection.append("Managed Apps", "app.managed-apps");
+                    }
+                    menu.appendSection(null, managedSection);
+
                     Menu appActions = new Menu(); {
                         appActions.append("Settings", "app.settings");
                         appActions.append("Donate", "app.donate");

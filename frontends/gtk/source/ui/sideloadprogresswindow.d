@@ -52,12 +52,21 @@ class SideloadProgressWindow: Window {
         this.setChild(progressBar);
     }
 
-    static void sideload(SideloaderGtkApplication app, DeveloperSession session, Application iosApp, iDevice device) {
+    static void sideload(
+        SideloaderGtkApplication app,
+        DeveloperSession session,
+        Application iosApp,
+        iDevice device,
+        bool managed = false,
+        string ipaSourcePath = null,
+        void delegate() onSuccess = null,
+    ) {
         SideloadProgressWindow progressWindow = new SideloadProgressWindow(app);
         progressWindow.show();
 
         new Thread({
             try {
+                string capturedName = iosApp.bundleName();
                 sideloadFull(app.configurationPath, device, session, iosApp, (progress, message) {
                     runInUIThread({
                         if (progressWindow.anim) {
@@ -74,12 +83,44 @@ class SideloadProgressWindow: Window {
                         progressWindow.anim.play();
                     });
                 });
+                string capturedBundleId = iosApp.bundleIdentifier();
+                string capturedUdid = device.udid;
                 getLogger().info("Sideload succeeded!!");
                 runInUIThread({
                     auto infoDialog = new MessageDialog(progressWindow, DialogFlags.DESTROY_WITH_PARENT | DialogFlags.MODAL | DialogFlags.USE_HEADER_BAR, MessageType.INFO, ButtonsType.CLOSE, "Application successfully installed!");
                     infoDialog.addOnResponse((_, __) {
                         infoDialog.close();
                         progressWindow.destroy();
+                        if (managed && ipaSourcePath !is null) {
+                            import std.file : copy, mkdirRecurse, exists, remove;
+                            import std.path : dirName;
+                            import daemon.managed_apps;
+                            import daemon.refresh_schedule;
+                            import std.datetime.systime : Clock, SysTime;
+                            import std.datetime.timezone : UTC;
+                            try {
+                                string stored = ipaStoragePath(app.dataPath, capturedBundleId);
+                                mkdirRecurse(dirName(stored));
+                                if (ipaSourcePath != stored) {
+                                    if (exists(stored)) remove(stored);
+                                    copy(ipaSourcePath, stored);
+                                }
+                                SysTime now = Clock.currTime(UTC());
+                                ManagedApp entry = {
+                                    bundleId:         capturedBundleId,
+                                    originalBundleId: capturedBundleId,
+                                    name:             capturedName,
+                                    ipaPath:          stored,
+                                    deviceUdid:       capturedUdid,
+                                    lastSigned:       now,
+                                    expiresAt:        signingExpiresAt(now),
+                                };
+                                addManagedApp(app.configurationPath, entry);
+                            } catch (Exception ex) {
+                                getLogger().errorF!"Failed to register managed app: %s"(ex.msg);
+                            }
+                        }
+                        if (onSuccess !is null) onSuccess();
                     });
                     infoDialog.show();
                 });

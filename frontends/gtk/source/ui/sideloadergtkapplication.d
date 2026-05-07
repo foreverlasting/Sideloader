@@ -34,6 +34,7 @@ import ui.devicewidget;
 import ui.mainwindow;
 import ui.manageappidwindow;
 import ui.managecertificateswindow;
+import ui.managedappswindow;
 import ui.utils;
 
 // TODO REMOVE THAT
@@ -41,6 +42,7 @@ __gshared static SideloaderGtkApplication runningApplication;
 
 class SideloaderGtkApplication: Application {
     string configurationPath;
+    string dataPath;
 
     MainWindow mainWindow;
 
@@ -54,6 +56,10 @@ class SideloaderGtkApplication: Application {
         super("dev.dadoum.Sideloader", ApplicationFlags.FLAGS_NONE);
 
         this.configurationPath = configurationPath;
+        {
+            auto xdg = environment.get("XDG_DATA_HOME");
+            this.dataPath = (xdg ? xdg : expandTilde("~/.local/share")).buildPath(applicationName);
+        }
         addOnActivate(&onActivate);
 
         auto aboutAction = new SimpleAction("about", null);
@@ -112,6 +118,15 @@ class SideloaderGtkApplication: Application {
             });
         });
         this.addAction(certificatesAction);
+
+        auto managedAppsAction = new SimpleAction("managed-apps", null);
+        managedAppsAction.addOnActivate((_, __) {
+            uiTry!({
+                auto window = new ManagedAppsWindow(this, mainWindow);
+                window.show();
+            });
+        });
+        this.addAction(managedAppsAction);
 
         auto donateAction = new SimpleAction("donate", null);
         donateAction.addOnActivate((_, __) {
