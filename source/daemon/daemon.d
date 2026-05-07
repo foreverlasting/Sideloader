@@ -2,7 +2,7 @@ module daemon.daemon;
 
 import std.datetime.systime;
 import std.datetime.timezone;
-import core.time : Duration, hours, seconds;
+import core.time : Duration, hours, minutes, seconds;
 import core.thread : Thread;
 
 import slf4d;
@@ -91,4 +91,3 @@ private void notifyDesktop(string message) {
     }
 }
 
-private alias minutes = (long n) => core.time.dur!"minutes"(n);
