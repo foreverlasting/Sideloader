@@ -12,19 +12,10 @@
 
     "dependencies": {
         "botan": "~>1.13",
-        "dynamic-loader": {
-            "repository": "git+https://github.com/Dadoum/dynamicloader.git",
-            "version": "9202b389affa6be0740e7295dea8f0146537a784"
-        },
+        "dynamic-loader": {"path": "vendor/dynamic-loader"},
         "intel-intrinsics": "~>1.11.15",
-        "plist-d": {
-            "repository": "git+https://github.com/Dadoum/libplist-d.git",
-            "version": "6fdaa60d62bbf7c55044069e8f03cbe74401c444"
-        },
-        "provision": {
-            "repository": "git+https://github.com/Dadoum/Provision.git",
-            "version": "645d56d8e8c86c057893321843db00b21f1aaeb2"
-        },
+        "plist-d": {"path": "vendor/plist-d"},
+        "provision": {"path": "vendor/provision"},
         "requests": "~>2.1",
         "slf4d": "~>2"
     },

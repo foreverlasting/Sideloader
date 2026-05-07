@@ -118,7 +118,7 @@ package class AppleAccount {
             auto time = Clock.currTime();
 
             Request request = Request();
-            request.sslSetVerifyPeer(false); // FIXME: SSL pin
+            request.sslSetVerifyPeer(true);
 
             request.addHeaders(cast(string[string]) [
                 "X-Apple-I-MD": Base64.encode(otp.oneTimePassword),
@@ -204,7 +204,7 @@ package class AppleAccount {
         appleId = appleId.toLower();
 
         Request request = Request();
-        request.sslSetVerifyPeer(false); // FIXME: SSL pin
+        request.sslSetVerifyPeer(true);
 
         request.addHeaders([
             "Content-Type": "text/x-xml-plist",
@@ -469,7 +469,7 @@ package class AppleAccount {
         auto otp = adi.requestOTP(-2);
         auto time = Clock.currTime();
 
-        rq.sslSetVerifyPeer(false); // FIXME: SSL pin
+        rq.sslSetVerifyPeer(true);
         rq.addHeaders(cast(string[string]) [
             "Content-Type": "text/x-xml-plist",
             "Accept": "text/x-xml-plist",
