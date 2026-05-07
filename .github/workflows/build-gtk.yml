@@ -1,6 +1,8 @@
 name: GTK builds
 
-on: push
+on:
+  push:
+  workflow_dispatch:
 
 env:
   BUILD_TYPE: Release
