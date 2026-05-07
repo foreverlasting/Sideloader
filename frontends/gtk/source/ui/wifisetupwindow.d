@@ -73,17 +73,31 @@ class WifiSetupWindow: Dialog {
                 with (lockdownd_error_t) switch (result) {
                     case LOCKDOWN_E_SUCCESS:
                     case LOCKDOWN_E_PAIRING_DIALOG_RESPONSE_PENDING:
+                        bool wifiEnabled = false;
+                        try {
+                            enableWifiConnections(device);
+                            wifiEnabled = true;
+                        } catch (Exception) {}
+
                         runInUIThread({
                             pairButton.setLabel("Paired");
-                            stepsLabel.setMarkup(
-                                "<b>Device paired! Enable WiFi sync on your iPhone:</b>\n\n" ~
-                                "1. Open <b>Settings</b>\n" ~
-                                "2. Go to <b>General → VPN &amp; Device Management</b>\n" ~
-                                "3. Tap your computer under <b>Development</b>\n" ~
-                                "4. Enable <b>Connect via Wi-Fi</b>\n\n" ~
-                                "Once done, you can unplug the USB cable.\n" ~
-                                "<i>Both devices must be on the same WiFi network.</i>"
-                            );
+                            if (wifiEnabled) {
+                                stepsLabel.setMarkup(
+                                    "<b>WiFi sync enabled!</b>\n\n" ~
+                                    "You can unplug the USB cable.\n" ~
+                                    "<i>Both devices must be on the same WiFi network.</i>"
+                                );
+                            } else {
+                                stepsLabel.setMarkup(
+                                    "<b>Device paired! Enable WiFi sync on your iPhone:</b>\n\n" ~
+                                    "1. Open <b>Settings</b>\n" ~
+                                    "2. Go to <b>General → VPN &amp; Device Management</b>\n" ~
+                                    "3. Tap your computer under <b>Development</b>\n" ~
+                                    "4. Enable <b>Connect via Wi-Fi</b>\n\n" ~
+                                    "Once done, you can unplug the USB cable.\n" ~
+                                    "<i>Both devices must be on the same WiFi network.</i>"
+                                );
+                            }
                             stepsLabel.show();
                         });
                         break;
@@ -105,5 +119,37 @@ class WifiSetupWindow: Dialog {
                 });
             }
         }).start();
+    }
+
+    private static void enableWifiConnections(iDevice device) {
+        import plist;
+        import std.bitmanip : nativeToBigEndian, bigEndianToNative;
+
+        scope lockdown = new LockdowndClient(device, "sideloader.wifi-setup");
+        auto service = lockdown.startService("com.apple.mobile.wireless_lockdown");
+
+        idevice_connection_t conn;
+        idevice_connect(device.handle, service.port, &conn).assertSuccess();
+        scope(exit) idevice_disconnect(conn);
+
+        auto req = new PlistDict();
+        req["EnableWifiConnections"] = new PlistBoolean(true);
+        string xml = req.toXml();
+
+        ubyte[4] lenBuf = nativeToBigEndian(cast(uint) xml.length);
+        uint sent;
+        idevice_connection_send(conn, cast(const(char)*) lenBuf.ptr, 4, &sent).assertSuccess();
+        idevice_connection_send(conn, xml.ptr, cast(uint) xml.length, &sent).assertSuccess();
+
+        ubyte[4] respLenBuf;
+        uint recvd;
+        idevice_connection_receive(conn, cast(char*) respLenBuf.ptr, 4, &recvd);
+        if (recvd == 4) {
+            uint bodyLen = bigEndianToNative!uint(respLenBuf);
+            if (bodyLen > 0 && bodyLen < 65536) {
+                char[] body_ = new char[bodyLen];
+                idevice_connection_receive(conn, body_.ptr, bodyLen, &recvd);
+            }
+        }
     }
 }

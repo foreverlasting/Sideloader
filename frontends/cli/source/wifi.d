@@ -72,15 +72,27 @@ struct WifiSetup
                 return 1;
         }
 
+        bool wifiEnabled = false;
+        try {
+            enableWifiConnections(device);
+            wifiEnabled = true;
+        } catch (Exception ex) {
+            log.warnF!"Could not enable WiFi sync automatically: %s"(ex.msg);
+        }
+
         writeln();
-        writeln("Device is paired. Now enable WiFi sync on your iPhone:");
-        writeln();
-        writeln("  1. Open the Settings app on your iPhone.");
-        writeln("  2. Go to:  General → VPN & Device Management");
-        writeln("  3. Tap your computer's name under \"Development\".");
-        writeln("  4. Enable \"Connect via Wi-Fi\".");
-        writeln();
-        writeln("Once enabled, you can unplug the USB cable.");
+        if (wifiEnabled) {
+            writeln("WiFi sync enabled. You can unplug the USB cable.");
+        } else {
+            writeln("Device is paired. Now enable WiFi sync on your iPhone:");
+            writeln();
+            writeln("  1. Open the Settings app on your iPhone.");
+            writeln("  2. Go to:  General → VPN & Device Management");
+            writeln("  3. Tap your computer's name under \"Development\".");
+            writeln("  4. Enable \"Connect via Wi-Fi\".");
+            writeln();
+            writeln("Once enabled, you can unplug the USB cable.");
+        }
         writeln("Run `sideloader device scan` to confirm WiFi connectivity.");
         writeln();
         writeln("Note: Both your iPhone and this machine must be on the same WiFi network.");
@@ -88,5 +100,37 @@ struct WifiSetup
         writeln("      device discovery to work. Run:");
         writeln("        sudo systemctl enable --now avahi-daemon");
         return 0;
+    }
+}
+
+private void enableWifiConnections(iDevice device) {
+    import plist;
+    import std.bitmanip : nativeToBigEndian, bigEndianToNative;
+
+    scope lockdown = new LockdowndClient(device, "sideloader.wifi-setup");
+    auto service = lockdown.startService("com.apple.mobile.wireless_lockdown");
+
+    idevice_connection_t conn;
+    idevice_connect(device.handle, service.port, &conn).assertSuccess();
+    scope(exit) idevice_disconnect(conn);
+
+    auto req = new PlistDict();
+    req["EnableWifiConnections"] = new PlistBoolean(true);
+    string xml = req.toXml();
+
+    ubyte[4] lenBuf = nativeToBigEndian(cast(uint) xml.length);
+    uint sent;
+    idevice_connection_send(conn, cast(const(char)*) lenBuf.ptr, 4, &sent).assertSuccess();
+    idevice_connection_send(conn, xml.ptr, cast(uint) xml.length, &sent).assertSuccess();
+
+    ubyte[4] respLenBuf;
+    uint recvd;
+    idevice_connection_receive(conn, cast(char*) respLenBuf.ptr, 4, &recvd);
+    if (recvd == 4) {
+        uint bodyLen = bigEndianToNative!uint(respLenBuf);
+        if (bodyLen > 0 && bodyLen < 65536) {
+            char[] body_ = new char[bodyLen];
+            idevice_connection_receive(conn, body_.ptr, bodyLen, &recvd);
+        }
     }
 }
