@@ -88,6 +88,15 @@ struct InstallCommand
         }, !singlethreaded);
         progressBar.finish();
 
+        import std.stdio : writeln;
+        writeln();
+        writeln("Application installed successfully!");
+        writeln();
+        writeln("If this is your first install with this certificate, you need to trust the");
+        writeln("developer profile on your device:");
+        writeln("  Settings → General → VPN & Device Management → tap your developer profile → Trust");
+        writeln();
+
         return 0;
     }
 }

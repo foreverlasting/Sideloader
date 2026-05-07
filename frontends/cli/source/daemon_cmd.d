@@ -158,6 +158,25 @@ struct DaemonStatus
 {
     int opCall()
     {
+        import daemon.daemon_state;
+
+        string configPath = systemConfigurationPath();
+        auto state = loadDaemonState(configPath);
+
+        if (state.lastCheckAt != SysTime.init) {
+            writeln("Daemon state:");
+            writefln!"  Last check:   %s"(state.lastCheckAt.toSimpleString());
+            if (state.lastRefreshAt != SysTime.init)
+                writefln!"  Last refresh: %s"(state.lastRefreshAt.toSimpleString());
+            writefln!"  Result:       %s"(state.lastResult);
+            if (state.nextCheckAt != SysTime.init)
+                writefln!"  Next check:   %s"(state.nextCheckAt.toSimpleString());
+            writeln();
+        } else {
+            writeln("No daemon state recorded yet (daemon may not have run).");
+            writeln();
+        }
+
         version (linux) {
             auto pid = spawnProcess(["systemctl", "--user", "status", "sideloader-daemon"]);
             return wait(pid);

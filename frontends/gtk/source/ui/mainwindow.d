@@ -19,12 +19,15 @@ import adw.Window;
 import constants;
 import imobiledevice;
 
+import daemon.paired_devices;
+
 import ui.devicewidget;
 import ui.utils;
 
 class MainWindow: Window {
     DeviceWidget[iDeviceInfo] deviceWidgets;
     private Box devicesBox;
+    private Label pairedOfflineLabel;
 
     Label connectDeviceLabel;
     private Label connectDeviceHint;
@@ -32,7 +35,10 @@ class MainWindow: Window {
     Cursor defaultCursor;
     Cursor waitCursor;
 
-    this() {
+    string configPath;
+
+    this(string configPath = null) {
+        this.configPath = configPath;
         // setTitle(applicationName);
         setTitle("");
         setDefaultSize(600, 400);
@@ -103,6 +109,13 @@ class MainWindow: Window {
                         connectDeviceHint.setWrap(true);
                         connectDeviceHint.setMarginTop(4);
                         devicesBox.append(connectDeviceHint);
+
+                        pairedOfflineLabel = new Label("");
+                        pairedOfflineLabel.addCssClass("dim-label");
+                        pairedOfflineLabel.setWrap(true);
+                        pairedOfflineLabel.setMarginTop(12);
+                        pairedOfflineLabel.hide();
+                        devicesBox.append(pairedOfflineLabel);
                     }
                     clamp.setChild(devicesBox);
                 }
@@ -125,6 +138,7 @@ class MainWindow: Window {
             auto deviceWidget = new DeviceWidget(deviceInfo);
             deviceWidgets[deviceInfo] = deviceWidget;
             devicesBox.append(deviceWidgets[deviceInfo]);
+            updatePairedOfflineLabel();
         }
     }
 
@@ -138,6 +152,36 @@ class MainWindow: Window {
                 connectDeviceLabel.show();
                 connectDeviceHint.show();
             }
+            updatePairedOfflineLabel();
+        }
+    }
+
+    private void updatePairedOfflineLabel() {
+        if (configPath is null) {
+            pairedOfflineLabel.hide();
+            return;
+        }
+
+        auto paired = loadPairedDevices(configPath);
+        if (paired.length == 0) {
+            pairedOfflineLabel.hide();
+            return;
+        }
+
+        import std.algorithm : canFind, filter, map;
+        import std.array : array;
+        import std.format : format;
+        import std.string : join;
+
+        auto connectedUdids = deviceWidgets.keys.map!(k => k.udid).array;
+        auto offline = paired.filter!(p => !connectedUdids.canFind(p.udid)).array;
+
+        if (offline.length == 0) {
+            pairedOfflineLabel.hide();
+        } else {
+            string names = offline.map!(d => d.deviceName).array.join(", ");
+            pairedOfflineLabel.setLabel(format!"WiFi-paired (offline): %s"(names));
+            pairedOfflineLabel.show();
         }
     }
 }

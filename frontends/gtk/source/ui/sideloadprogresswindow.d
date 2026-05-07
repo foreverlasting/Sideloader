@@ -87,7 +87,7 @@ class SideloadProgressWindow: Window {
                 string capturedUdid = device.udid;
                 getLogger().info("Sideload succeeded!!");
                 runInUIThread({
-                    auto infoDialog = new MessageDialog(progressWindow, DialogFlags.DESTROY_WITH_PARENT | DialogFlags.MODAL | DialogFlags.USE_HEADER_BAR, MessageType.INFO, ButtonsType.CLOSE, "Application successfully installed!");
+                    auto infoDialog = new MessageDialog(progressWindow, DialogFlags.DESTROY_WITH_PARENT | DialogFlags.MODAL | DialogFlags.USE_HEADER_BAR, MessageType.INFO, ButtonsType.CLOSE, "Application successfully installed!\n\nIf this is your first install with this certificate, trust the developer profile on your device:\nSettings → General → VPN & Device Management → tap your profile → Trust");
                     infoDialog.addOnResponse((_, __) {
                         infoDialog.close();
                         progressWindow.destroy();

@@ -76,15 +76,41 @@ class DeviceWidget: PreferencesGroup {
 
             if (deviceInfo.connType == iDeviceConnectionType.usbmuxd) {
                 ActionRow wifiSetupRow = new ActionRow();
-                wifiSetupRow.setTitle("Set up WiFi...");
-                wifiSetupRow.setSubtitle("One-time setup — sideload wirelessly without a cable");
                 wifiSetupRow.setIconName("network-wireless-symbolic");
-                wifiSetupRow.setActivatable(true);
-                wifiSetupRow.addOnActivated((_) {
-                    auto rootWindow = cast(Window) this.getRoot();
-                    wifiWindow = new WifiSetupWindow(device, rootWindow);
-                    wifiWindow.show();
-                });
+
+                new Thread({
+                    auto status = checkWifiPairingStatus(device);
+                    runInUIThread({
+                        final switch (status) {
+                            case WifiPairingStatus.pairedWithWifi:
+                                wifiSetupRow.setTitle("WiFi paired");
+                                wifiSetupRow.setSubtitle("This device is set up for wireless sideloading");
+                                wifiSetupRow.setActivatable(false);
+                                break;
+                            case WifiPairingStatus.pairedNoWifi:
+                                wifiSetupRow.setTitle("Enable WiFi...");
+                                wifiSetupRow.setSubtitle("Device is paired — enable wireless connectivity");
+                                wifiSetupRow.setActivatable(true);
+                                wifiSetupRow.addOnActivated((_) {
+                                    auto rootWindow = cast(Window) this.getRoot();
+                                    wifiWindow = new WifiSetupWindow(device, rootWindow, runningApplication.configurationPath);
+                                    wifiWindow.show();
+                                });
+                                break;
+                            case WifiPairingStatus.notPaired:
+                                wifiSetupRow.setTitle("Set up WiFi...");
+                                wifiSetupRow.setSubtitle("One-time setup — sideload wirelessly without a cable");
+                                wifiSetupRow.setActivatable(true);
+                                wifiSetupRow.addOnActivated((_) {
+                                    auto rootWindow = cast(Window) this.getRoot();
+                                    wifiWindow = new WifiSetupWindow(device, rootWindow, runningApplication.configurationPath);
+                                    wifiWindow.show();
+                                });
+                                break;
+                        }
+                    });
+                }).start();
+
                 phoneExpander.addRow(wifiSetupRow);
             }
 
@@ -112,7 +138,7 @@ class DeviceWidget: PreferencesGroup {
         dialog.addOnResponse((response, _) {
             dialog.close();
             if (response == ResponseType.YES) {
-                wifiWindow = new WifiSetupWindow(device, cast(Window) this.getRoot());
+                wifiWindow = new WifiSetupWindow(device, cast(Window) this.getRoot(), runningApplication.configurationPath);
                 wifiWindow.show();
             }
         });

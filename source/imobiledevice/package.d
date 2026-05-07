@@ -180,10 +180,39 @@ public class LockdowndClient {
         return lockdownd_pair(handle, null); // note: the error is expected within the normal execution flow, so no throw
     }
 
+    public lockdownd_error_t validatePair() {
+        return lockdownd_validate_pair(handle, null);
+    }
+
     ~this() {
         if (handle) { // it may be null if an exception has been thrown TODO: switch from a constructor to a static function to fix that.
             lockdownd_client_free(handle).assertSuccess();
         }
+    }
+}
+
+enum WifiPairingStatus {
+    notPaired,
+    pairedNoWifi,
+    pairedWithWifi,
+}
+
+WifiPairingStatus checkWifiPairingStatus(iDevice device) {
+    try {
+        scope lockdown = new LockdowndClient(device, "sideloader.wifi-check");
+        auto pairResult = lockdown.validatePair();
+        if (pairResult != lockdownd_error_t.LOCKDOWN_E_SUCCESS)
+            return WifiPairingStatus.notPaired;
+
+        try {
+            auto val = lockdown["com.apple.mobile.wireless_lockdown", "EnableWifiConnections"];
+            if (val !is null && val.boolean().native())
+                return WifiPairingStatus.pairedWithWifi;
+        } catch (Exception) {}
+
+        return WifiPairingStatus.pairedNoWifi;
+    } catch (Exception) {
+        return WifiPairingStatus.notPaired;
     }
 }
 

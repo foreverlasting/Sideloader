@@ -42,16 +42,33 @@ struct ScanDevices
 {
     int opCall()
     {
+        import daemon.paired_devices;
+
         auto devices = iDevice.deviceList();
         if (devices.length == 0) {
             writeln("No devices found. Make sure your device is connected via USB or WiFi.");
-            return 0;
+        } else {
+            writefln!"Found %d device(s):"(devices.length);
+            foreach (d; devices) {
+                string connType = d.connType == iDeviceConnectionType.network ? "WiFi" : "USB";
+                writefln!" - UDID: %s  [%s]"(d.udid, connType);
+            }
         }
-        writefln!"Found %d device(s):"(devices.length);
-        foreach (d; devices) {
-            string connType = d.connType == iDeviceConnectionType.network ? "WiFi" : "USB";
-            writefln!" - UDID: %s  [%s]"(d.udid, connType);
+
+        string configPath = systemConfigurationPath();
+        auto paired = loadPairedDevices(configPath);
+        if (paired.length > 0) {
+            auto connectedUdids = devices.map!(d => d.udid).array;
+            auto offline = paired.filter!(p => !connectedUdids.canFind(p.udid)).array;
+            if (offline.length > 0) {
+                writeln();
+                writeln("WiFi-paired (not currently reachable):");
+                foreach (p; offline) {
+                    writefln!" - %s  (UDID: %s)"(p.deviceName, p.udid);
+                }
+            }
         }
+
         return 0;
     }
 }

@@ -8,6 +8,8 @@ import slf4d.default_provider;
 
 import imobiledevice;
 
+import daemon.paired_devices;
+
 import cli_frontend;
 
 @(Command("wifi").Description("WiFi sideloading helpers."))
@@ -80,19 +82,34 @@ struct WifiSetup
             log.warnF!"Could not enable WiFi sync automatically: %s"(ex.msg);
         }
 
+        if (wifiEnabled) {
+            import std.datetime.systime : Clock;
+            import std.datetime.timezone : UTC;
+            string configPath = systemConfigurationPath();
+            string devName;
+            try {
+                scope lockdownName = new LockdowndClient(device, "sideloader.wifi-check");
+                devName = lockdownName.deviceName();
+            } catch (Exception) { devName = targetUdid; }
+            PairedDevice paired = {
+                udid: targetUdid,
+                deviceName: devName,
+                pairedAt: Clock.currTime(UTC()),
+            };
+            savePairedDevice(configPath, paired);
+        }
+
         writeln();
         if (wifiEnabled) {
             writeln("WiFi sync enabled. You can unplug the USB cable.");
         } else {
-            writeln("Device is paired. Now enable WiFi sync on your iPhone:");
+            writeln("Device is paired, but automatic WiFi enablement failed.");
             writeln();
-            writeln("  1. Open the Settings app on your iPhone.");
-            writeln("  2. Go to:  General → VPN & Device Management");
-            writeln("  3. Tap your computer's name under \"Development\".");
-            writeln("  4. Enable \"Connect via Wi-Fi\".");
-            writeln();
-            writeln("Once enabled, you can unplug the USB cable.");
+            writeln("Try disconnecting and reconnecting the USB cable, then pair again.");
+            writeln("If the issue persists, ensure Developer Mode is enabled on your iPhone:");
+            writeln("  Settings → Privacy & Security → Developer Mode");
         }
+        writeln();
         writeln("Run `sideloader device scan` to confirm WiFi connectivity.");
         writeln();
         writeln("Note: Both your iPhone and this machine must be on the same WiFi network.");

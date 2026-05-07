@@ -154,7 +154,7 @@ class SideloaderGtkApplication: Application {
         _adi = provisioningData.adi;
         _device = provisioningData.device;
 
-        mainWindow = new MainWindow();
+        mainWindow = new MainWindow(configurationPath);
         addWindow(mainWindow);
         mainWindow.show();
 

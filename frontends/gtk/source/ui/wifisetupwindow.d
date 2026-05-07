@@ -17,13 +17,17 @@ import slf4d;
 
 import imobiledevice;
 
+import daemon.paired_devices;
+
 import ui.utils;
 
 class WifiSetupWindow: Dialog {
     private Button pairButton;
     private Label stepsLabel;
+    private string configPath;
 
-    this(iDevice device, Window parent) {
+    this(iDevice device, Window parent, string configPath = null) {
+        this.configPath = configPath;
         this.setTitle("Set Up WiFi");
         this.setTransientFor(parent);
         this.setDefaultSize(420, 0);
@@ -69,7 +73,17 @@ class WifiSetupWindow: Dialog {
         new Thread({
             try {
                 scope lockdown = new LockdowndClient(device, "sideloader.wifi-setup");
-                auto result = lockdown.pair();
+
+                auto validateResult = lockdown.validatePair();
+                bool alreadyPaired = (validateResult == lockdownd_error_t.LOCKDOWN_E_SUCCESS);
+
+                lockdownd_error_t result;
+                if (alreadyPaired) {
+                    result = lockdownd_error_t.LOCKDOWN_E_SUCCESS;
+                } else {
+                    result = lockdown.pair();
+                }
+
                 with (lockdownd_error_t) switch (result) {
                     case LOCKDOWN_E_SUCCESS:
                     case LOCKDOWN_E_PAIRING_DIALOG_RESPONSE_PENDING:
@@ -78,6 +92,19 @@ class WifiSetupWindow: Dialog {
                             enableWifiConnections(device);
                             wifiEnabled = true;
                         } catch (Exception) {}
+
+                        if (wifiEnabled && configPath !is null) {
+                            import std.datetime.systime : Clock;
+                            import std.datetime.timezone : UTC;
+                            string devName;
+                            try { devName = lockdown.deviceName(); } catch (Exception) { devName = device.udid; }
+                            PairedDevice paired = {
+                                udid: device.udid,
+                                deviceName: devName,
+                                pairedAt: Clock.currTime(UTC()),
+                            };
+                            savePairedDevice(configPath, paired);
+                        }
 
                         runInUIThread({
                             pairButton.setLabel("Paired");
@@ -89,12 +116,10 @@ class WifiSetupWindow: Dialog {
                                 );
                             } else {
                                 stepsLabel.setMarkup(
-                                    "<b>Device paired! Enable WiFi sync on your iPhone:</b>\n\n" ~
-                                    "1. Open <b>Settings</b>\n" ~
-                                    "2. Go to <b>General → VPN &amp; Device Management</b>\n" ~
-                                    "3. Tap your computer under <b>Development</b>\n" ~
-                                    "4. Enable <b>Connect via Wi-Fi</b>\n\n" ~
-                                    "Once done, you can unplug the USB cable.\n" ~
+                                    "<b>Device paired, but automatic WiFi enablement failed.</b>\n\n" ~
+                                    "Try disconnecting and reconnecting the USB cable, then pair again.\n\n" ~
+                                    "If the issue persists, ensure <b>Developer Mode</b> is enabled on your " ~
+                                    "iPhone (Settings → Privacy &amp; Security → Developer Mode).\n\n" ~
                                     "<i>Both devices must be on the same WiFi network.</i>"
                                 );
                             }

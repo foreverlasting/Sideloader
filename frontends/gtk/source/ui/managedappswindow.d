@@ -31,6 +31,7 @@ import sideload;
 
 import server.developersession;
 
+import daemon.daemon_state;
 import daemon.managed_apps;
 import daemon.refresh_schedule;
 
@@ -99,6 +100,30 @@ class ManagedAppsWindow: Dialog {
         }
 
         refreshAllButton.setSensitive(true);
+
+        auto state = loadDaemonState(app.configurationPath);
+        if (state.lastCheckAt != SysTime.init) {
+            auto statusGroup = new PreferencesGroup();
+            statusGroup.setTitle("Daemon Status");
+
+            auto statusRow = new ActionRow();
+            statusRow.setTitle(state.lastResult == "ok" ? "Healthy" : "Error");
+            string statusSubtitle = format!"Last check: %s"(state.lastCheckAt.toSimpleString());
+            if (state.lastResult != "ok")
+                statusSubtitle ~= "\n" ~ state.lastResult;
+            statusRow.setSubtitle(statusSubtitle);
+            statusRow.setIconName(state.lastResult == "ok" ? "emblem-ok-symbolic" : "dialog-warning-symbolic");
+            statusGroup.add(statusRow);
+
+            if (state.nextCheckAt != SysTime.init) {
+                auto nextRow = new ActionRow();
+                nextRow.setTitle("Next check");
+                nextRow.setSubtitle(state.nextCheckAt.toSimpleString());
+                statusGroup.add(nextRow);
+            }
+
+            contentBox.append(statusGroup);
+        }
 
         auto appsGroup = new PreferencesGroup();
         appsGroup.setTitle("Auto-Refresh Apps");
