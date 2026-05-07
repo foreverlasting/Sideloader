@@ -159,6 +159,7 @@ struct DaemonStatus
     int opCall()
     {
         import daemon.daemon_state;
+        import std.datetime.systime : SysTime;
 
         string configPath = systemConfigurationPath();
         auto state = loadDaemonState(configPath);
