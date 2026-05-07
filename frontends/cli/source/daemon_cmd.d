@@ -25,7 +25,7 @@ struct DaemonCommand
 {
     int opCall()
     {
-        import std.sumtype : SumType;
+        import std.sumtype : SumType, match;
         return cmd.match!(
             (DaemonRun cmd)       => cmd(),
             (DaemonInstall cmd)   => cmd(),
@@ -34,7 +34,7 @@ struct DaemonCommand
         );
     }
 
-    import std.sumtype : SumType;
+    import std.sumtype : SumType, match;
     @SubCommands
     SumType!(DaemonRun, DaemonInstall, DaemonUninstall, DaemonStatus) cmd;
 }
@@ -107,7 +107,7 @@ struct DaemonInstall
             string serviceDir  = expandTilde("~/.config/systemd/user");
             string servicePath = buildPath(serviceDir, "sideloader-daemon.service");
             mkdirRecurse(serviceDir);
-            write(servicePath, serviceContent);
+            std.file.write(servicePath, serviceContent);
 
             writefln!"Wrote service file to: %s"(servicePath);
 

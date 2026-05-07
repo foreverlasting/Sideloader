@@ -15,13 +15,14 @@ struct WifiCommand
 {
     int opCall()
     {
+        import std.sumtype : match;
         return cmd.match!(
             (WifiSetup cmd) => cmd()
         );
     }
 
     @SubCommands
-    import std.sumtype : SumType;
+    import std.sumtype : SumType, match;
     SumType!(WifiSetup) cmd;
 }
 
