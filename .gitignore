@@ -22,3 +22,8 @@ docs/
 # Swift
 /swift/.build/
 /swift/Dependencies/SideloaderBackend.xcframework/Headers/sideloader-autogen.h
+
+# Build artifacts
+bin/
+tests/daemon-unit/daemon-unit-tests*
+tests/daemon-unit/.dub/

@@ -98,8 +98,31 @@ public class iDevice {
         return cast(string) udid.fromStringz();
     }
 
-    public this(string udid) {
-        idevice_new_with_options(&handle, udid.toStringz, idevice_options.IDEVICE_LOOKUP_USBMUX | idevice_options.IDEVICE_LOOKUP_NETWORK).assertSuccess();
+    enum ConnectionPreference {
+        auto_,      /// USB if available, else WiFi (default)
+        preferWifi, /// WiFi if available, else USB
+        usbOnly,    /// USB only
+        wifiOnly,   /// WiFi/network only
+    }
+
+    public this(string udid, ConnectionPreference pref = ConnectionPreference.auto_) {
+        idevice_options opts;
+        final switch (pref) {
+            case ConnectionPreference.auto_:
+                opts = idevice_options.IDEVICE_LOOKUP_USBMUX | idevice_options.IDEVICE_LOOKUP_NETWORK;
+                break;
+            case ConnectionPreference.preferWifi:
+                opts = idevice_options.IDEVICE_LOOKUP_USBMUX | idevice_options.IDEVICE_LOOKUP_NETWORK
+                     | idevice_options.IDEVICE_LOOKUP_PREFER_NETWORK;
+                break;
+            case ConnectionPreference.usbOnly:
+                opts = idevice_options.IDEVICE_LOOKUP_USBMUX;
+                break;
+            case ConnectionPreference.wifiOnly:
+                opts = idevice_options.IDEVICE_LOOKUP_NETWORK;
+                break;
+        }
+        idevice_new_with_options(&handle, udid.toStringz, opts).assertSuccess();
     }
 
     ~this() {

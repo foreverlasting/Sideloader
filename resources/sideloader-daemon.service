@@ -1,0 +1,14 @@
+[Unit]
+Description=Sideloader Auto-Refresh Daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/sideloader daemon run -i
+Restart=on-failure
+RestartSec=60
+Environment=HOME=%h
+
+[Install]
+WantedBy=default.target

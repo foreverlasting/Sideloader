@@ -24,6 +24,12 @@ struct InstallCommand
     @(NamedArgument("udid").Description("UDID of the device (if multiple are available)."))
     string udid = null;
 
+    @(NamedArgument("wifi").Description("Prefer WiFi connection when device is available on both USB and WiFi."))
+    bool preferWifi;
+
+    @(NamedArgument("usb").Description("Connect via USB only, ignoring WiFi-connected devices."))
+    bool usbOnly;
+
     @(NamedArgument("singlethread").Description("Run the signature process on a single thread. Sacrifices speed for more consistency."))
     bool singlethreaded;
 
@@ -45,24 +51,33 @@ struct InstallCommand
             return 1;
         }
 
+        auto connPref = usbOnly          ? iDevice.ConnectionPreference.usbOnly
+                      : preferWifi       ? iDevice.ConnectionPreference.preferWifi
+                                         : iDevice.ConnectionPreference.auto_;
+
         auto devices = iDevice.deviceList();
         string udid = this.udid;
         if (!udid) {
-            if (devices.length == 1) {
-                udid = devices[0].udid;
+            // When --usb is set, ignore WiFi-only devices during auto-detection
+            import std.algorithm : filter;
+            import std.array : array;
+            auto candidates = usbOnly
+                ? devices.filter!(d => d.connType == iDeviceConnectionType.usbmuxd).array
+                : devices;
+            if (candidates.length == 1) {
+                udid = candidates[0].udid;
             } else {
-                if (!devices.length) {
-                    log.error("No device connected.");
+                if (!candidates.length) {
+                    log.error(usbOnly ? "No USB-connected device found." : "No device connected.");
                     return 1;
                 }
-                if (!this.udid) {
-                    log.error("Multiple devices are connected. Please select one with --udid.");
-                }
+                log.error("Multiple devices are connected. Please select one with --udid.");
+                return 1;
             }
         }
 
-        log.infoF!"Initiating connection the device (UUID: %s)"(udid);
-        auto device = new iDevice(udid);
+        log.infoF!"Initiating connection to the device (UDID: %s)"(udid);
+        auto device = new iDevice(udid, connPref);
         Bar progressBar = new Bar();
         string message;
         progressBar.message = () => message;

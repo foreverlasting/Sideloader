@@ -1,0 +1,12 @@
+{
+    "name": "daemon-unit-tests",
+    "targetType": "executable",
+    "targetName": "daemon-tests",
+    "mainSourceFile": "source/runner.d",
+    "sourcePaths": ["source/"],
+    "sourceFiles": [
+        "../../source/daemon/managed_apps.d",
+        "../../source/daemon/refresh_schedule.d"
+    ],
+    "dependencies": {}
+}

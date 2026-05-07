@@ -15,6 +15,7 @@ import botan.filters.data_src;
 
 import argparse;
 
+import imobiledevice;
 import server.developersession;
 
 import cli_frontend;
@@ -25,6 +26,7 @@ struct DeviceCommand
     int opCall()
     {
         return cmd.match!(
+                (ScanDevices cmd) => cmd(),
                 (ListDevices cmd) => cmd(),
                 (AddDevice cmd) => cmd(),
                 (DeleteDevice cmd) => cmd()
@@ -32,7 +34,26 @@ struct DeviceCommand
     }
 
     @SubCommands
-    SumType!(ListDevices, AddDevice, DeleteDevice) cmd;
+    SumType!(ScanDevices, ListDevices, AddDevice, DeleteDevice) cmd;
+}
+
+@(Command("scan").Description("List locally connected iOS devices (USB and WiFi)."))
+struct ScanDevices
+{
+    int opCall()
+    {
+        auto devices = iDevice.deviceList();
+        if (devices.length == 0) {
+            writeln("No devices found. Make sure your device is connected via USB or WiFi.");
+            return 0;
+        }
+        writefln!"Found %d device(s):"(devices.length);
+        foreach (d; devices) {
+            string connType = d.connType == iDeviceConnectionType.network ? "WiFi" : "USB";
+            writefln!" - UDID: %s  [%s]"(d.udid, connType);
+        }
+        return 0;
+    }
 }
 
 @(Command("list").Description("List registered devices."))

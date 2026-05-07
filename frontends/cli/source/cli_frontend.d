@@ -189,19 +189,41 @@ string defaultConfigurationPath()
     return configurationPath.buildPath("Sideloader");
 }
 
+string systemDataPath()
+{
+    return environment.get("SIDELOADER_DATA_DIR").orDefault(defaultDataPath());
+}
+
+string defaultDataPath()
+{
+    version (Windows) {
+        string dataPath = environment["LocalAppData"];
+    } else version (OSX) {
+        string dataPath = "~/Library/Application Support/".expandTilde();
+    } else {
+        string dataPath = environment.get("XDG_DATA_HOME")
+            .orDefault("~/.local/share")
+            .expandTilde();
+    }
+    return dataPath.buildPath("Sideloader");
+}
+
 // planned commands
 
 import app_id;
 import certificate;
+import daemon_cmd;
 import device;
 import install;
 // @(Command("login").Description("Log-in to your Apple account."))
 // @(Command("logout").Description("Log-out."))
+import managed;
 import sign;
 // @(Command("swift-setup").Description("Set-up certificates to build a Swift Package Manager iOS application (requires SPM in the path)."))
 import team;
 import tool;
 // @(Command("tweak").Description("Install a tweak in an ipa file."))
+import wifi;
 
 mixin template LoginCommand()
 {
@@ -235,13 +257,16 @@ int entryPoint(Commands commands)
         return commands.cmd.match!(
                 (AppIdCommand cmd) => cmd(),
                 (CertificateCommand cmd) => cmd(),
+                (DaemonCommand cmd) => cmd(),
                 (DeviceCommand cmd) => cmd(),
                 (InstallCommand cmd) => cmd(),
+                (ManagedCommand cmd) => cmd(),
                 (SignCommand cmd) => cmd(),
                 (TrollsignCommand cmd) => cmd(),
                 (TeamCommand cmd) => cmd(),
                 (ToolCommand cmd) => cmd(),
                 (VersionCommand cmd) => cmd(),
+                (WifiCommand cmd) => cmd(),
         );
     }
     catch (Exception ex)
@@ -261,7 +286,7 @@ struct Commands
     uint threadCount = uint.max;
 
     @SubCommands
-    SumType!(AppIdCommand, CertificateCommand, DeviceCommand, InstallCommand, SignCommand, TrollsignCommand, TeamCommand, ToolCommand, VersionCommand) cmd;
+    SumType!(AppIdCommand, CertificateCommand, DaemonCommand, DeviceCommand, InstallCommand, ManagedCommand, SignCommand, TrollsignCommand, TeamCommand, ToolCommand, VersionCommand, WifiCommand) cmd;
 }
 
 mixin CLI!Commands.main!entryPoint;
